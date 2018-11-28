@@ -1,0 +1,318 @@
+#!/usr/bin/expect
+set timeout 60
+set match_max 100000
+set hostname [lindex $argv 0]; #This will be publisher node fqdn
+set osadmin1 [lindex $argv 1]; #Publisher osadmn user name
+set password1 [lindex $argv 2]; #Publisher osadmin name
+set logfile [lindex $argv 3]; #
+set usesame [lindex $argv 4]; #Will be t , if subscriber uses osadmin1 and password1, otherwise f
+
+I want these 2 argv to be optional when calling the script
+******************************************************************************
+set osadmin2 [lindex $argv 5]; #If usesame = f, then use this osadmin2 as user
+set password2 [lindex $argv 6]; #if usesame = f, then use this password2
+******************************************************************************
+
+log_user 0
+
+
+#Starts a new log file each time it runs
+log_file -noappend $logfile
+
+#Checks the variables being passed into the script
+if {[llength $argv] == 0} {
+    send_user "Usage: scriptname, publisher fqdn,osadmin os user, os password, sub uses same user and password, sub osadmin, sub ospassword\n"
+    exit 1
+}
+
+#Starts the SSH process and surpresses the key accept
+spawn ssh -q -o StrictHostKeyChecking=no $osadmin1@$hostname
+
+
+
+#Checks the return and looks for password prompt
+
+expect {
+    timeout {
+    log_user 1 
+    send_log "\nlogin_status: failed\nlogin_error: failed to get password prompt\n\n"; 
+    exit 1 
+    }
+    eof {
+    log_user 1 
+    send_log "\nlogin_status: failed\nlogin_error: unable to reach $hostname\n\n"; 
+    exit 1 
+    }
+    "*assword" {
+        send "$password\r"
+        expect {
+            "*dmin:" {
+                log_user 1
+                send_log "\nlogin_status: success\nlogin_error:\n\n";    
+                send "\r"
+            }
+            "*assword"
+            {
+                log_user 1
+                send_log "\nlogin_status: failed\nlogin_error: username or password is invlaid\n\n"; 
+                exit 1
+            }
+            
+     }
+   }
+}
+log_user 0
+******************************************************************************
+First Command show network cluster sample out put
+******************************************************************************
+admin:show network cluster
+192.168.0.231 dev-uccx-sub01.evdev.com dev-uccx-sub01 Subscriber contactcenterxpress DBSub authenticated using TCP since Sun Nov 18 01:10:08 2018
+192.168.0.230 dev-uccx-pub.evdev.com dev-uccx-pub Publisher DBPub authenticated
+
+Server Table (processnode) Entries
+----------------------------------
+dev-uccx-pub   
+dev-uccx-sub01 
+admin:
+
+------------------------------------------------------------------------------
+This will return either 1 line or 2 lines at the begining.
+What I need is the following output to the log:
+
+So we will always have the publisher line.
+set variable $publisher uccxs:name:dev.uccx-pub.evdev.com
+set variable $pubprimary uccxs:is_primary:1
+set variable $pubnodetype uccxs:node_type:contactcenterxpress ***********This will be hardcoded as the publisher line doesn't include this information******
+
+If line with subscriber is present we will need:
+set variable $subscriber uccxs:name:dev-uccx-sub01.evdev.com
+set variable $subprimary uccxs:is_primary:0
+set variable $nodetype uccxs:node_type:contactcenterxpress
+
+******************************************************************************
+
+******************************************************************************
+The next command you have already been working on. I want to change them to variables.
+admin:show network eth0
+Ethernet 0
+DHCP         : disabled           Status     : up
+IP Address   : 192.168.0.230      IP Mask    : 255.255.255.000
+Link Detected: yes                Mode       : Auto disabled, Full, 10000 Mbits/s
+Duplicate IP : no
+
+DNS
+Primary      : 192.168.0.200      Secondary  : Not Configured
+Options      : timeout:5 attempts:2 single-request-reopen
+Domain       : evdev.com
+Gateway      : 192.168.0.1 on Ethernet 0
+
+
+******************************************************************************
+expect {
+    "*dmin:" 
+    {
+    send "show network eth0\r"
+    expect -re ".*dmin:"
+    set ip $expect_out(buffer)
+    }
+}
+
+#puts $ip
+# now we will create key value pairs of Ip Address, DNS, Domain and more
+set records [regexp -all -inline {(\w+\s\w+:\s[a-zA-Z0-9.]+|\w+\s+:\s[a-zA-Z0-9.]+|\w+\s\w+\s:\s[a-zA-Z0-9.]+)} $ip]
+
+# sometimes regex works unexpected so including the point to remove unnecessary duplicates
+set records [lsort -unique $records]
+
+# Now we have key value pair list so iterate over it, find key like Address for IP Address
+# Primary for Primary DNS and so on
+# as soon you filter it out, use the actual values to log in custom format
+# now you can run this undestand what it do
+
+foreach item $records {
+    set keyval [split $item ":"]
+    set key [lindex $keyval 0]
+    if { [string first "Address" $key] != -1 } {
+        set pubipadd "uccxs:ip4_add: [lindex $keyval 1]\n"
+    } elseif { [string first "Primary" $key] != -1 } {
+        set pubdns1 "uccxs:dns1: [lindex $keyval 1]\n"
+    } elseif { [string first "Secondary" $key] != -1 } {
+        if {[string first "Not" [lindex $keyval 1]] != -1} {
+           set pubdns2 "uccxs:dns2: Not Configured"
+        } else {
+           set pubdns2 "uccxs:dns2: [lindex $keyval 1]\n"
+        }
+    } elseif { [string first "Domain" $key] != -1} {
+        set pubdomain "uccxs:domain: [lindex $keyval 1]\n"
+    } elseif { [string first "Gateway" $key] != -1 } {
+        set pubipgateway "uccs:ip4_gateway: [lindex $keyval 1]\n"
+    } elseif { [string first "Mask" $key] != -1 } {
+        set pubipmask "uccxs:ip4_mask: [lindex $keyval 1]\n"
+    }
+ }
+
+******************************************************************************
+Next Command show uccx version sample output
+admin:show uccx version
+ Active UCCX Version: 11.6.1.10000-51
+ Inactive UCCX Version: NA
+
+ Command successful.
+admin:
+
+------------------------------------------------------------------------------
+This will be formatted this way always;
+set variable $pubactive uccxs:active_version: 11.6.1.1000-51
+set variable $pubinactive uccxs:inactive_version: **** the output will display NA or the version if it has an inactive version********
+******************************************************************************
+
+
+
+******************************************************************************
+Next Command utils ntp server list *******There can be up to 5 ntp servers in the list. Each server is on a new line This could also be a fully qualified doman name as well********
+admin:utils ntp server list
+192.168.0.210
+admin:
+
+------------------------------------------------------------------------------
+This will be formatted this way always;
+set variable $pubntp1 uccxs:ntp1:192.168.0.210 *********There must always be at least 1 server in the list.***********
+*****Additional servers are optional, NA if the server not in list.*****
+set variable $pubntp2 uccxs:ntp2:
+set variable $pubntp3 uccxs:ntp3:
+set variable $pubntp4 uccxs:ntp4:
+set variable $pubntp5 uccxs:ntp5:
+******************************************************************************
+
+******************************************************************************
+Next Command show hardware sample output
+admin:show hardware
+
+HW Platform       : VMware Virtual Machine
+Processors        : 2
+Type              : Intel(R) Xeon(R) CPU           E5645  @ 2.40GHz
+CPU Speed         : 2400
+Memory            : 10240 MBytes
+Object ID         : 1.3.6.1.4.1.9.1.1348
+OS Version        : UCOS 6.0.0.0-2.i386
+Serial Number     : VMware-56 4d af 6c 7c 25 e0 d0-f1 dd 44 b1 a0 ad b6 87
+
+RAID Version      :
+No RAID controller information is available
+
+BIOS Information  :
+PhoenixTechnologiesLTD 6.00 04/14/2014
+
+RAID Details      :
+No RAID information is available
+-----------------------------------------------------------------------
+Physical device information
+-----------------------------------------------------------------------
+Number of Disks   : 1
+Hard Disk #1
+Size (in GB)      : 146
+
+Partition Details :
+
+Disk /dev/sda: 19059 cylinders, 255 heads, 63 sectors/track
+Units = sectors of 512 bytes, counting from 0
+
+   Device Boot    Start       End   #sectors  Id  System
+/dev/sda1   *       128  54984703   54984576  83  Linux
+/dev/sda2      54984704 110034943   55050240  83  Linux
+/dev/sda3     110034944 110559231     524288  83  Linux
+/dev/sda4     110559232 306182834  195623603   5  Extended
+/dev/sda5     110559360 114687936    4128577  82  Linux swap / Solaris
+/dev/sda6     114688000 306182834  191494835  83  Linux
+admin:
+------------------------------------------------------------------------------
+Processors Field From Sample
+set variable $pubvmcpu uccxs:vm_cpu:2 ****As example*****8
+
+Type Field from Sample
+set variable $pubvmproctype uccxs:vm_type:Intel(R) Xeon(R) CPU           E5645  @ 2.40GHz *****Need whole entry***********
+
+Memory Field from Sample
+set variable $pubvmmem uccxs:vm_ram:10240 MBytes *******Need whole line**********
+
+In the physical device information There can be 2 disks this system has only a single disks
+
+set variable $pubvmdisk1 uccxs:vm_disk1:146+GB
+If disk = 2
+set variable $pubcmdisk2 uccxs:vm_disk2:146+GB
+******************************************************************************
+
+******************************************************************************
+Now out put to log:
+
+send_log "UCCX Publisher Information\n"
+send_log "$publisher\n"
+send_log "$pubprimary\n"
+send_log "$pubnodetype\n"
+send_log "$pubipadd\n"
+send_log "$pubipmask\n"
+send_log "$pubipgateway\n"
+send_log "$pubdomain\n"
+send_log "$pubdns1\n"
+send_log "$pubdns2\n"
+send_log "$pubdns3\n"
+send_log "$pubactive\n"
+send_log "$pubinactive\n"
+send_log "$pubntp1\n"
+send_log "$pubntp2\n"
+send_log "$pubntp3\n"
+send_log "$pubntp4\n"
+send_log "$pubntp5\n"
+send_log "$pubvmcpu\n"
+send_log "$pubvmproctype\n"
+send_log "$pubvmmem\n"
+send_log "$pubvmdisk1\n"
+send_log "$pubvmdisk2\n"
+******************************************************************************
+
+******************************************************************************
+Now is were I am not sure how to do this, so I will explain what I want to happen
+
+After running the command from above, show network cluster, we will know if there a single node or 2 nodes.
+If there are 2 nodes, I want to connec to the new node and gather the information from the subscriber.
+
+Here is where the optional argv comes into play, if the argv 4 usesame = t, then we will use the same username and password that was used to connect to the publisher.
+If argv 4 usesame = f, then we would use argv 5 osadmin2 and argv 6 password 2 to connect to the subscriber.
+
+It would be the same information that we gathered from the publisher only the variable names would change for sending to the log:
+
+send_log "UCCX Subscriber Information\n"
+send_log "$sublisher\n"
+send_log "$subprimary\n"
+send_log "$subnodetype\n"
+send_log "$subipadd\n"
+send_log "$subipmask\n"
+send_log "$subipgateway\n"
+send_log "$subdomain\n"
+send_log "$subdns1\n"
+send_log "$subdns2\n"
+send_log "$subdns3\n"
+send_log "$subactive\n"
+send_log "$subinactive\n"
+send_log "$subntp1\n"
+send_log "$subntp2\n"
+send_log "$subntp3\n"
+send_log "$subntp4\n"
+send_log "$subntp5\n"
+send_log "$subvmcpu\n"
+send_log "$subvmproctype\n"
+send_log "$subvmmem\n"
+send_log "$subvmdisk1\n"
+send_log "$subvmdisk2\n"
+******************************************************************************* 
+send_log "\n"
+send "\r"
+
+
+
+
+expect "*dmin:"
+
+send "logout\r"
+
+expect eof
