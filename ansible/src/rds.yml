@@ -1,0 +1,107 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - include_vars:
+        file: template.json
+        name: variable
+      tags:
+        - load
+
+    - command: pip install boto
+      tags:
+        - install
+    
+    - command: pip install boto3
+      tags:
+        - install
+
+    - command: pip install botocore
+      tags:
+        - install
+
+    - rds: 
+        aws_access_key: "{{ variable.AWS_ACCESS_KEY }}"
+        aws_secret_key: "{{ variable.AWS_SECRET_KEY }}"
+        command: create
+        aws_region: "{{ variable.AWS_REGION }}"
+        db_engine: "{{ variable.DB_ENGINE }}"
+        instance_name: "{{ variable.INSTANCE_NAME}}"
+        size: "{{ variable.SIZE }}"
+        engine_version: "{{ variable.DB_VERSION }}"
+        instance_type: "{{ variable.INSTANCE_TYPE}}"
+        username: "{{ variable.USERNAME }}"
+        password: "{{ variable.PASSWORD }}"
+        backup_retention: "{{ variable.BACKUP_RETENTION }}"
+        backup_window: "{{ variable.BACKUP_WINDOW }}"
+        license_model: "{{ variable.LICENSE_MODEL }}"
+        maint_window: "{{ variable.MAINTENANCE_WINDOW }}"
+        multi_zone: "{{ variable.MULTI_ZONE }}"
+        iops: "{{ variable.IOPS }}"
+        option_group: "{{ variable.OPTION_GROUP }}"
+        parameter_group: "{{ variable.PARAMETER_GROUP }}"
+        port: "{{ variable.PORT }}"
+        publicly_accessible: "{{ variable.PUBLICLY_ACCESSIBLE }}"
+        subnet: "{{ variable.SUBNET }}"
+        tags: "{{ variable.TAGS }}"
+        vpc_security_groups: "{{ variable.VPC_SECURITY_GROUPS }}"
+        upgrade: "{{ variable.UPGRADE }}"
+        wait: "{{ variable.WAIT }}"
+        wait_timeout: "{{ variable.WAIT_TIMEOUT }}"
+        zone: "{{ variable.ZONE }}"
+      tags:
+        - create
+
+    # - rds: 
+    #     aws_access_key: "{{ variable.AWS_ACCESS_KEY }}"
+    #     aws_secret_key: "{{ variable.AWS_SECRET_KEY }}"
+    #     aws_region: "{{ variable.AWS_REGION }}"
+    #     password: "{{ variable.PASSWORD }}"
+    #     size: "{{ variable.SIZE }}"
+    #     apply_immediately: "{{ variable.APPLY_IMD }}"
+    #     backup_retention: "{{ variable.BACKUP_RETENTION }}"
+    #     backup_window: "{{ variable.BACKUP_WINDOW }}"
+    #     instance_name: "{{ variable.INSTANCE_NAME }}"
+    #     maint_window: "{{ variable.MAINTENANCE_WINDOW }}"
+    #     multi_zone: "{{ variable.MULTI_ZONE }}"
+    #     new_instance_name: "{{ variable.NEW_NAME }}"
+    #     parameter_group: "{{ variable.PARAMETER_GROUP }}"
+    #     vpc_security_groups: "{{ variable.VPC_SECURITY_GROUPS }}"
+    #     wait: "{{ variable.WAIT }}"
+    #     wait_timeout: "{{ variable.WAIT_TIMEOUT }}"
+    #     command: modify
+    #   tags:
+    #     - modify
+
+    - command: python rds_runner.py modify
+      register: output
+      tags:
+        - modify
+
+    - command: python rds_runner.py describe
+      register: output
+      tags:
+        - describe
+
+    - command: python rds_runner.py start
+      register: output
+      tags:
+        - start
+
+    - command: python rds_runner.py stop
+      register: output
+      tags:
+        - stop
+
+    - command: python rds_runner.py reboot
+      register: output
+      tags:
+        - reboot
+
+    - command: python rds_runner.py delete
+      register: output
+      tags:
+        - delete
+
+
+    - debug: "msg={{ output }} "

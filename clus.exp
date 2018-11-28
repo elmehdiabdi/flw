@@ -1,0 +1,42 @@
+# this is our command output which is saved at tmp
+set ip "Ethernet 0
+DHCP         : disabled           Status     : up
+IP Address   : 192.168.0.230      IP Mask    : 255.255.255.000
+Link Detected: yes                Mode       : Auto disabled, Full, 10000 Mbits/s
+Duplicate IP : no
+
+DNS
+Primary      : 192.168.0.200      Secondary  : Not Configured
+Options      : timeout:5 attempts:2 single-request-reopen
+Domain       : evdev.com
+Gateway      : 192.168.0.1 on Ethernet 0"
+
+# now we will create key value pairs of Ip Address, DNS, Domain and more
+set records [regexp -all -inline {(\w+\s\w+:\s[a-zA-Z0-9.]+|\w+\s+:\s[a-zA-Z0-9.]+|\w+\s\w+\s:\s[a-zA-Z0-9.]+)} $ip]
+
+# sometimes regex works unexpected so including the point to remove unnecessary duplicates
+
+set records [lsort -unique $records]
+
+# Now we have key value pair list so iterate over it, find key like Address for IP Address
+# Primary for Primary DNS and so on
+# as soon you filter it out, use the actual values to log in custom format
+# now you can run this undestand what it do
+
+foreach item $records {
+    set keyval [split $item ":"]
+    set key [lindex $keyval 0]
+    if { [string first "Address" $key] != -1 } {
+        puts "IP Address : [lindex $keyval 1]"
+    } elseif { [string first "Primary" $key] != -1 } {
+	puts "Primary DNS : [lindex $keyval 1]"	
+    } elseif { [string first "Secondary" $key] != -1 } {
+	puts "Secondary DNS : [lindex $keyval 1]"
+    } elseif { [string first "Domain" $key] != -1} {
+	puts "Domain : [lindex $keyval 1]"
+    } elseif { [string first "Gateway" $key] != -1 } {
+	puts "Gateway : [lindex $keyval 1]"
+    } elseif { [string first "Mask" $key] != -1 } {
+	puts "IP Mask : [lindex $keyval 1]"
+    }
+ }

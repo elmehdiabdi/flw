@@ -1,0 +1,8 @@
+{
+	"AWS_SECRET_KEY":"I9l2JjZss1yw26VBXWr0mjBGp9k6sRcjNWDuV5EL",
+	"AWS_ACCESS_KEY":"AKIAJJOBV27RTC7GYG2Q",
+	"AWS_REGION":"us-east-1",
+	"INSTANCE_NAME":"postgre-app-nginx-dev1",
+	"KEY":["db-instance-id"],
+	"VALUES":[["postgre-app-nginx-dev"]]
+}

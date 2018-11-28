@@ -1,0 +1,33 @@
+{
+	"AWS_SECRET_KEY":"I9l2JjZss1yw26VBXWr0mjBGp9k6sRcjNWDuV5EL",
+	"AWS_ACCESS_KEY":"AKIAJJOBV27RTC7GYG2Q",
+	"AWS_REGION":"us-east-1",
+	"AWS_REGION_URL":"apigateway.us-east-2.amazonaws.com",
+	"DB_ENGINE":"postgres",
+	"INSTANCE_NAME":"postgre-app-ngine-dev1",
+	"SIZE":100,
+	"IOPS":1000,
+	"DB_VERSION":"10.5",
+	"INSTANCE_TYPE":"db.t2.micro",
+	"USERNAME":"root",
+	"PASSWORD":"dunzen_master",
+	"BACKUP_RETENTION":"2",
+	"BACKUP_WINDOW":"20:30-21:30",
+	"LICENSE_MODEL":"postgresql-license",
+	"MAINTENANCE_WINDOW":"Mon:22:00-Mon:23:15",
+	"MULTI_ZONE":"no",
+	"OPTION_GROUP":"",
+	"PARAMETER_GROUP":"default.postgres10",
+	"PORT":5432,
+	"PUBLICLY_ACCESSIBLE":true,
+	"VPC_SECURITY_GROUPS":["sg-609e5b14"],
+	"SUBNET":"",
+	"TAGS":{
+		"Environment": "test" ,
+        "Application": "CMS"
+	},
+	"UPGRADE":"no",
+	"WAIT":"yes",
+	"WAIT_TIMEOUT":"300",
+	"ZONE":"us-east-1a"
+}

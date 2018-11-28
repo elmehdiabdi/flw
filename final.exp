@@ -1,0 +1,234 @@
+#!/usr/bin/expect
+set timeout 60
+set match_max 100000
+set hostname [lindex $argv 0]; #This will be publisher node fqdn
+set osadmin1 [lindex $argv 1]; #Publisher osadmn user name
+set password1 [lindex $argv 2]; #Publisher osadmin name
+set logfile [lindex $argv 3]; #
+set usesame [lindex $argv 4]; #Will be t , if subscriber uses osadmin1 and password1, otherwise f
+
+#if { $usesame == 
+#set osadmin2 [lindex $argv 5]; #If usesame = f, then use this osadmin2 as user
+#set password2 [lindex $argv 6]; #if usesame = f, then use this password2
+#******************************************************************************
+
+log_user 0
+
+
+#Starts a new log file each time it runs
+log_file -noappend $logfile
+
+#Checks the variables being passed into the script
+if {[llength $argv] == 0} {
+    send_user "Usage: scriptname, publisher fqdn,osadmin os user, os password, sub uses same user and password, sub osadmin, sub ospassword\n"
+    exit 1
+}
+
+#Starts the SSH process and surpresses the key accept
+
+spawn ssh -q -o StrictHostKeyChecking=no $osadmin1@$hostname
+
+
+
+#Checks the return and looks for password prompt
+
+expect {
+    timeout {
+    log_user 1 
+    send_log "\nlogin_status: failed\nlogin_error: failed to get password prompt\n\n"; 
+    exit 1 
+    }
+    eof {
+    log_user 1 
+    send_log "\nlogin_status: failed\nlogin_error: unable to reach $hostname\n\n"; 
+    exit 1 
+    }
+    "*assword" {
+        send "$password1\r"
+        expect {
+            "*dmin:" {
+                log_user 1
+                send_log "\nlogin_status: success\nlogin_error:\n\n";    
+                send "\r"
+            }
+            "*assword"
+            {
+                log_user 1
+                send_log "\nlogin_status: failed\nlogin_error: username or password is invlaid\n\n"; 
+                exit 1
+            }
+            
+     }
+   }
+}
+log_user 0
+expect {
+    "*dmin:" 
+    {
+    send "show network eth0\r"
+    expect -re ".*dmin:"
+    set ip $expect_out(buffer)
+    puts $ip
+    puts $ip
+    }
+}
+expect {
+	"*dmin:"
+	{
+		send "show network cluster"
+		expect -re ".*dmin:"
+puts "NTWRK luster"
+		set pubsub $expect_out(buffer)
+	}
+}
+
+expect {
+	"*dmin:"
+	{
+		send "show uccx version"
+		expect -re ".*dmin:"
+puts "Version Check"
+		set version $expect_out(buffer)
+	}
+}
+expect {
+	"*dmin:"
+	{
+		send "utils ntp server list"
+		expect -re ".*dmin:"
+		set ntp $expect_out(buffer)
+	}
+}
+expect {
+	"*dmin:"
+	{
+		send "show hardware"
+		expect -re ".*dmin:"
+		set hw $expect_out(buffer)
+	}
+}
+
+#puts $ip
+# now we will create key value pairs of Ip Address, DNS, Domain and more
+set records [regexp -all -inline {(\w+\s\w+:\s[a-zA-Z0-9.]+|\w+\s+:\s[a-zA-Z0-9.]+|\w+\s\w+\s:\s[a-zA-Z0-9.]+)} $ip]
+
+# sometimes regex works unexpected so including the point to remove unnecessary duplicates
+set records [lsort -unique $records]
+
+# Now we have key value pair list so iterate over it, find key like Address for IP Address
+# Primary for Primary DNS and so on
+# as soon you filter it out, use the actual values to log in custom format
+# now you can run this undestand what it do
+
+foreach item $records {
+    set keyval [split $item ":"]
+    set key [lindex $keyval 0]
+    if { [string first "Address" $key] != -1 } {
+        set pubipadd "uccxs:ip4_add: [lindex $keyval 1]\n"
+    } elseif { [string first "Primary" $key] != -1 } {
+        set pubdns1 "uccxs:dns1: [lindex $keyval 1]\n"
+    } elseif { [string first "Secondary" $key] != -1 } {
+        if {[string first "Not" [lindex $keyval 1]] != -1} {
+           set pubdns2 "uccxs:dns2: Not Configured"
+        } else {
+           set pubdns2 "uccxs:dns2: [lindex $keyval 1]\n"
+        }
+    } elseif { [string first "Domain" $key] != -1} {
+        set pubdomain "uccxs:domain: [lindex $keyval 1]\n"
+    } elseif { [string first "Gateway" $key] != -1 } {
+        set pubipgateway "uccs:ip4_gateway: [lindex $keyval 1]\n"
+    } elseif { [string first "Mask" $key] != -1 } {
+        set pubipmask "uccxs:ip4_mask: [lindex $keyval 1]\n"
+    }
+ }
+
+#----------------------------------------------------------- network cluster formatting
+
+# split across lines
+set splits [split $pubsub "\n"]
+
+# for each node
+foreach item $splits {
+	if { [string first "Publisher" $item] != -1 } {
+		puts "Publisher Present"
+		# find IP address
+		set ips [regexp -all -inline {\d+\.\d+\.\d+\.\d+} $item]
+		# separate each space separated string
+		set itm [regexp -all -inline {\S+} $item]
+		foreach val $itm {
+			# check whether this is a valid domain or not
+			if { [regexp {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val] == 1} {
+				# valid domain found
+				set dns [regexp -all -inline {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val]
+			}
+		}
+		# assigning variables
+		puts "Found DNS $dns"
+		set publisher "uccxs:name:$dns"
+		set pubprimary "uccxs:is_primary:1"
+		set pubnodetype "uccxs:node_type:contactcenterxpress"
+	} elseif { [string first "Subscriber" $item ] != -1 } {
+		puts "Subscriber Present"
+		set ips [regexp -all -inline {\d+\.\d+\.\d+\.\d+} $item]
+		# separate each space separated string
+		set itm [regexp -all -inline {\S+} $item]
+		foreach val $itm {
+			# check whether this is a valid domain or not
+			if { [regexp {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val] == 1} {
+				# valid domain found
+				set dns [regexp -all -inline {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val]
+			}
+		}
+		puts "Found DNS $dns"
+		set publisher "uccxs:name:$dns"
+		set pubprimary "uccxs:is_primary:0"
+		set pubnodetype "uccxs:node_type:contactcenterxpress"
+	}
+}
+
+#--------------------------------------------------------- uccx version
+
+# separate each line
+set line [split $version "\n"]
+
+# for each line, check have key value pairs
+foreach item $line {
+	# check for key value string, only one colon
+	if { [string first ":" $item] != -1 } {
+		# find key value pair
+		set keyval [split $item ":"]
+		set key [lindex $keyval 0]
+		set val [lindex $keyval 1]
+		if { [string first "Active" $key] != -1 } {
+			set pubactive "uccxs:active_version: $val"
+			puts $pubactive 
+		} elseif { [string first "Inactive" $key] != -1 } {
+			set pubinactive "uccxs:inactive_version: $val"
+			puts $pubinactive
+		}
+	}
+}
+
+#----------------------------------- ntp utils
+
+#split across lines
+set lines [split $ntp "\n"]
+# i for saving variable from ntp1
+set i 1
+foreach line $lines {
+	# check whether it's domain/IP or not
+	set nps [regexp -all -inline {(\d+\.\d+\.\d+\.\d+|[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+)} $line]
+	set nps [lsort -unique $nps]
+	set pubntp$i "uccxs:ntp$i:$nps"
+	incr i
+}
+while { $i < 6 } {
+	set pubntp$i "uccxs:ntp$i:NA"
+	incr i
+}
+puts $pubntp1
+puts $pubntp2
+puts $pubntp3
+puts $pubntp4
+puts $pubntp5
+

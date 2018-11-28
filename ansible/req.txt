@@ -1,0 +1,35 @@
+	  --db-instance-identifier
+      --db-instance-class
+      --availability_zone 
+      --multi-az
+      --engine
+      --engine-version
+      --db-subnet-group-name
+      --db-parameter-group-name
+      --storage-type
+      --iops
+      --encrypt_storage 
+      --allocated-storage
+      --master-username
+      --master-user-password
+      --vpc-security-group-ids
+      --db-subnet-group-name
+      --public_access
+      --preferred-maintenance-window
+      --allow_minor_db_upgrades
+      --backup-retention-period
+      --preferred-backup-window
+      --tags Name, instance_name,Environment etc
+      - Port
+	  - license_model
+	  -wait_timeout
+	  -wait
+For rds modifying/maintenance tasks, please script them in Ansible, not awscli.
+
+      in the variable file, the Standard db instance naming convention should be : 
+
+for postgres Dev instance, the rds instance name should be like : post-<name>-dev
+for postgres Prod instance, the rds instance name should be like : post-<name>-prd 
+
+for SQL Server Dev instance, the rds instance name should be like : sqls-<name>-dev
+for SQL Server Prod instance, the rds instance name should be like : sqls-<name>-prd
