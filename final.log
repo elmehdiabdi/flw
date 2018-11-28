@@ -2,3 +2,25 @@
 login_status: success
 login_error:
 
+UCCX Publisher Information
+uccxs:name:dev-uccx-pub.evdev.com
+uccxs:is_primary:1
+uccxs:node_type:contactcenterxpress
+uccxs:ip4_add:  192.168.0.230
+
+uccxs:ip4_mask:  255.255.255.000
+
+uccs:ip4_gateway:  192.168.0.1
+
+uccxs:domain:  evdev.com
+
+uccxs:dns1:  192.168.0.200
+
+uccxs:dns2: Not Configured
+uccxs:active_version:  11.6.1.10000-51
+uccxs:inactive_version:  NA
+uccxs:ntp1:
+uccxs:ntp2:192.168.0.210
+uccxs:ntp3:
+uccxs:ntp4:NA
+uccxs:ntp5:NA

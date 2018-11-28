@@ -142,3 +142,66 @@ Units = sectors of 512 bytes, counting from 0
 /dev/sda4     110559232 306182834  195623603   5  Extended
 /dev/sda5     110559360 114687936    4128577  82  Linux swap / Solaris
 /dev/sda6     114688000 306182834  191494835  83  Linux"
+
+# split across lines
+set lines [split $hw "\n"]
+
+# disk counts
+set dcc 1
+# for each line
+foreach line $lines {
+	set rc [regexp -all -inline {\w+\s+:\s\d} $line]
+	foreach itm $rc {
+		if { [string first "Processors" $itm] != -1 } {
+			set spt [split $itm ":"]
+			set cpuc [lindex $spt 1]
+			set cpuc [string trim $cpuc]
+			set pubvmcpu "uccxs:vm_cpu:$cpuc"
+			puts $pubvmcpu
+		} elseif { [string first "Disks" $itm] != -1 } {
+			set spt [split $itm ":"]
+			set dc [lindex $spt 1]
+			set dc [string trim $dc]
+		}
+	}
+	set disks [regexp -all -inline {Size\s[a-zA-Z0-9() ]+:\s\d+} $line]
+	foreach disk $disks {
+		set itm [split $disk ":"]
+		set dck [lindex $itm 1]
+		set dsksize [string trim $dck]
+		set sizestr [lindex $itm 0]
+		if { [ string first "MB" $sizestr] != -1 } {
+			set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+MB"
+			incr dcc
+		} elseif { [ string first "KB" $sizestr] != -1 } {
+			set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+KB"
+			incr dcc
+		} elseif { [ string first "TB" $sizestr] != -1} {
+			set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+TB"
+			incr dcc
+		} elseif { [ string first "PB" $sizestr] != -1} {
+			set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+PB"
+			incr dcc
+		} elseif { [ string first "GB" $sizestr] != -1} {
+			set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+GB"
+			incr dcc
+		}
+		puts $pubvmdisk1
+	}
+	set type [regexp -all -inline {\w+\s+:\s.+} $line]
+	foreach item $type {
+		if { [ string first "Type" $item ] != -1  } {
+			set spt [split $item ":"]
+			set desc [lindex $spt 1]
+			set desc [string range $desc 1 end]
+			set pubvmproctype "uccxs:vm_type:$desc"
+			puts $pubvmproctype
+		} elseif { [string first "Memory" $item ] != -1 } {
+			set spt [split $item ":"]
+			set desc [lindex $spt 1]
+			set desc [string range $desc 1 end]
+			set pubvmmem "uccxs:vm_ram:$desc"
+			puts $pubvmmem
+		}
+	}
+}

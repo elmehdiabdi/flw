@@ -62,51 +62,37 @@ expect {
    }
 }
 log_user 0
-expect {
-    "*dmin:" 
-    {
-    send "show network eth0\r"
-    expect -re ".*dmin:"
-    set ip $expect_out(buffer)
-    puts $ip
-    puts $ip
-    }
-}
-expect {
-	"*dmin:"
-	{
-		send "show network cluster"
-		expect -re ".*dmin:"
-puts "NTWRK luster"
-		set pubsub $expect_out(buffer)
-	}
-}
+		expect "*dmin:"
+		puts "Running show network eth0 command ..."
+		send "show network eth0\r"
+		expect "*dmin:"
+		set ip $expect_out(buffer)
+		puts $ip
 
-expect {
-	"*dmin:"
-	{
-		send "show uccx version"
-		expect -re ".*dmin:"
-puts "Version Check"
+		puts "Running show network cluster command ..."
+		send "show network cluster\r"
+		expect "*dmin:"
+		set pubsub $expect_out(buffer)
+		puts $pubsub
+
+		puts "Running show uccx version command ..."
+		send "show uccx version\r"
+		expect "*dmin:"
 		set version $expect_out(buffer)
-	}
-}
-expect {
-	"*dmin:"
-	{
-		send "utils ntp server list"
-		expect -re ".*dmin:"
+		puts $version
+
+		puts "Running utils ntp server list command ..."
+		send "utils ntp server list\r"
+		expect "*dmin:"
 		set ntp $expect_out(buffer)
-	}
-}
-expect {
-	"*dmin:"
-	{
+		puts $ntp
+
+		puts "Running show hardware command ..."
 		send "show hardware"
-		expect -re ".*dmin:"
+		expect "*dmin:"
 		set hw $expect_out(buffer)
-	}
-}
+		puts $hw
+
 
 #puts $ip
 # now we will create key value pairs of Ip Address, DNS, Domain and more
@@ -145,6 +131,9 @@ foreach item $records {
 #----------------------------------------------------------- network cluster formatting
 
 # split across lines
+puts "\n\n"
+puts $pubsub 
+puts "\n\n"
 set splits [split $pubsub "\n"]
 
 # for each node
@@ -180,9 +169,9 @@ foreach item $splits {
 			}
 		}
 		puts "Found DNS $dns"
-		set publisher "uccxs:name:$dns"
-		set pubprimary "uccxs:is_primary:0"
-		set pubnodetype "uccxs:node_type:contactcenterxpress"
+		set subscriber "uccxs:name:$dns"
+		set subprimary "uccxs:is_primary:0"
+		set subnodetype "uccxs:node_type:contactcenterxpress"
 	}
 }
 
@@ -231,4 +220,21 @@ puts $pubntp2
 puts $pubntp3
 puts $pubntp4
 puts $pubntp5
+send_log "UCCX Publisher Information\n"
+send_log "$publisher\n"
+send_log "$pubprimary\n"
+send_log "$pubnodetype\n"
+send_log "$pubipadd\n"
+send_log "$pubipmask\n"
+send_log "$pubipgateway\n"
+send_log "$pubdomain\n"
+send_log "$pubdns1\n"
+send_log "$pubdns2\n"
+send_log "$pubactive\n"
+send_log "$pubinactive\n"
+send_log "$pubntp1\n"
+send_log "$pubntp2\n"
+send_log "$pubntp3\n"
+send_log "$pubntp4\n"
+send_log "$pubntp5\n"
 
