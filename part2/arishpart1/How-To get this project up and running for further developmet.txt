@@ -1,0 +1,27 @@
+﻿##########################################################
+# CST8333 2018 Final Project                             #
+#                                                        #
+# Created by Arish Kakadiya                              #
+# Student number: 040894137                              #
+# November 26 ,2018                                      #
+#                                                        #
+##########################################################
+
+
+# How-To get this project up and running for further development (Create as a separate document)
+
+I chose Python as the language I wanted to research and my project is centered around an 32100054.csv database. 
+
+For this project I was required to comment any websites/resources that I used to aid my project, which you'll notice in all the files. I also included a unit testing file (DatabaseTest). The program was written in Python using Python 3.6. I wrote the code in PyCharm 2017.2. Database connectivity was used with Oracle's MySQL Connector/Python database driver.Which is downloaded from here (https://dev.mysql.com/downloads/connector/python/) and downloaded PyCharm from JET BRAINS officail website here(https://www.jetbrains.com/pycharm/) and used Notepad++ to write How-To text file .
+
+I have choosed Pandas, because it's much faster, has an excellent and extremely rich API, a source code looks much cleaner and better. And used Advance function like 
+ 
+I have done my all work on Windows operating system named "Windows 10 Home Single Language , OS Build 17134.407" and I have used 3rd party API’s like --- and MySQL Connector/Python database driver .I have used a command "conda update --all " to update all python libraries and environment components which is super command and will updated all new updates in single run.another command used was "pip install mysql-connector-python-rf" to install MYSQL connector in Python  using Python CLI. and used pandas data using “loc” the Pandas loc indexer can be used with DataFrames for two different use cases:
+a.) Selecting rows by label/index
+b.) Selecting rows with a boolean / conditional lookup
+The loc indexer is used with the same syntax as iloc: data.loc[<row selection>, <column selection>] . for more details can findout here (https://www.shanelynn.ie/select-pandas-dataframe-rows-and-columns-using-iloc-loc-and-ix/)
+
+
+Python Library used :
+1. Pandas anything more on Pandas can find here(https://pandas.pydata.org/pandas-docs/stable/)
+2. CSV For file reading and writing (https://docs.python.org/2/library/csv.html)

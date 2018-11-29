@@ -1,0 +1,39 @@
+##########################################################
+# CST8333 2018 Final Project                             #
+#                                                        #
+# Created by Arish Kakadiya                              #
+# Student number: 040894137                              #
+# November 26 ,2018                                      #
+#                                                        #
+##########################################################	
+
+
+Programmer technical overview (Create as a separate document)
+• This document connects the final project, to the requirements outlined at the start of the course within the
+Assignment 03 and 04 Handouts – The relevant sections have been copied here (next page):
+• Please note that your final project must demonstrate each of:
+• Variables: declaration, assignment, operators etc.
+• Memory Management (Stack, Heap, References, Pointers, Allocation, Deallocation etc.)
+• Decision Structures
+• Looping Structures
+• Methods / Functions as well as Classes / Objects / Structs / Modules etc.
+• Exception Handling
+• File IO (either text or binary information saved to / read from a file on a hard-disk)
+• Use of API libraries that come with the language as a standard API
+• Please note that your project must demonstrate at least 3 items from the following list
+• Inheritance (possibly with Polymorphism)
+• Database Connectivity
+• Data Structures (containers), Algorithms (that manipulate containers), and Iterator Objects
+• Generics
+• Multithreading
+• Anything else you think might be interesting, check with your professor to confirm
+** Unit testing must be demonstrated for Assignments 3 and 4 as well as Final Project
+Your project must demonstrate these items via code you have actively written to earn credit, i.e. stating that where Python is
+dynamically typed all of your code is ‘generic’ or stating that every Visual Basic form demonstrates inheritance because they
+‘Inherits Form’ (the IDE generates this sample code) are not acceptable. These are just examples, if you are not sure check with
+your professor ahead of time.
+Note: For the Technical Report you must include source code samples within the body of the report and explicitly
+name the source code files they come from as well as document what is demonstrated and how it matches learning
+requirements. Generalizations like ‘loops are everywhere’ or only indicating the source ‘see file foo.bar for the tuna
+method on line 42’ is not sufficient. Include code samples in the body of the report, either as plain text or screen
+captures
