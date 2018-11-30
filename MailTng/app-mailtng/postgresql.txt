@@ -1,0 +1,113 @@
+# Postgresql Installation script
+
+cd /home;
+rpm -Uvh https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-6-x86_64/pgdg-centos96-9.6-3.noarch.rpm;
+yum -y update;
+yum -y install postgresql96-server postgresql96-contrib;
+service postgresql-9.6 initdb;
+service postgresql-9.6 start;
+chkconfig postgresql-9.6 on;
+
+su -c "psql" - postgres; # then enter password # UN4cZ2z33G3K
+CREATE ROLE kry PASSWORD 'VkJPw8sVQC28sVQC2' SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
+
+
+nano /var/lib/pgsql/9.6/data/pg_hba.conf
+
+# "local" is for Unix domain socket connections only
+local	 all		 all					 md5
+# IPv4 local connections:
+host	 all		 all		 0.0.0.0/0		 md5
+# IPv6 local connections:
+host    all		all		::1/128 		md5
+------------------------------------------
+# enter these line at the end of the file 
+# "local" is for Unix domain socket connections only
+local	all		all						md5
+# IPv4 local connections:
+host	all		all		0.0.0.0/0		md5
+# IPv6 local connections:
+host    all		all		::1/128 		md5
+
+service postgresql-9.6 restart;
+
+nano /var/lib/pgsql/9.6/data/postgresql.conf;
+
+# change #listen_addresses = 'localhost' to listen_addresses = '*'
+# change #port = 5432 to port = 5432
+
+service postgresql-9.6 restart;
+
+# install phpPgAdmin
+yum -y install epel-release;
+yum -y update;
+yum -y install phpPgAdmin httpd;
+
+> /etc/httpd/conf.d/phpPgAdmin.conf;
+
+nano /etc/httpd/conf.d/phpPgAdmin.conf;
+
+# empty the file and write this content in it 
+
+Alias /phpPgAdmin /usr/share/phpPgAdmin
+
+<Location /phpPgAdmin>
+	Order deny,allow
+	Allow from all
+</Location>
+
+
+service httpd restart;
+chkconfig httpd on;
+
+# configure pgAdmin
+nano /etc/phpPgAdmin/config.inc.php;
+
+# change $conf['servers'][0]['host'] = ''; to $conf['servers'][0]['host'] = 'localhost';
+# change $conf['extra_login_security'] = true; to $conf['extra_login_security'] = false;
+# change $conf['owned_only'] = false; to $conf['owned_only'] = true;
+
+service postgresql-9.6 restart
+service httpd restart
+
+VkJPw8sVQC28sVQC2
+
+psql -U kry -d mailtng_system -a -f /root/mailtng_system.sql
+psql -U kry -d mailtng_lists -a -f /root/mailtng_lists.sql
+
+
+
+
+chown -R apache:apache /var/mailtng
+chown -R apache:apache /var/mailtng/tmp/*
+chown -R apache:apache /var/mailtng/tmp/logs/
+
+
+service iptables stop
+service httpd restart
+
+php.ini
+memory_limit = 4G
+post_max_size = 5G
+upload_max_filesize = 5G
+max_file_uploads = 500
+
+
+
+cd /opt/
+wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz"
+
+tar xzf jdk-8u131-linux-x64.tar.gz
+cd /opt/jdk1.8.0_131/
+alternatives --install /usr/bin/java java /opt/jdk1.8.0_131/bin/java 2
+alternatives --config java
+
+alternatives --install /usr/bin/jar jar /opt/jdk1.8.0_131/bin/jar 2
+alternatives --install /usr/bin/javac javac /opt/jdk1.8.0_131/bin/javac 2
+alternatives --set jar /opt/jdk1.8.0_131/bin/jar
+alternatives --set javac /opt/jdk1.8.0_131/bin/javac
+java -version
+export JAVA_HOME=/opt/jdk1.8.0_131
+export JRE_HOME=/opt/jdk1.8.0_131/jre
+export PATH=$PATH:/opt/jdk1.8.0_131/bin:/opt/jdk1.8.0_131/jre/bin
+echo $JAVA_HOME

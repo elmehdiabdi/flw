@@ -1,0 +1,74 @@
+# remove old services 
+yum remove -y httpd;
+yum remove -y libopendkim*;
+yum remove -y opendkim;
+yum remove -y postfix;
+yum remove -y php*;
+rm -rf /etc/httpd;
+rm -rf /etc/opendkim*;
+
+# install new services 
+yum install -y openssh-clients;
+yum install -y glibc.i686;
+yum install -y pam.i686 pam;
+yum install -y nano;
+yum install -y rsync;
+yum install -y wget;
+yum install -y xinetd;
+yum install -y gcc;
+yum install -y make;
+yum install -y httpd;      
+yum install -y perl;
+yum install -y mod_ssl;
+yum install -y zip;
+yum install -y unzip;
+yum update -y;
+
+# stop firewall
+service iptables stop;
+
+# disable selinux
+setenforce 0;
+setenforce Disabled;
+
+# install php 
+wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-6.noarch.rpm
+wget http://rpms.remirepo.net/enterprise/remi-release-6.rpm
+rpm -Uvh remi-release-6*.rpm epel-release-latest-6.noarch.rpm
+
+nano /etc/yum.repos.d/remi.repo
+line30 enabled=1
+
+yum install -y php;
+yum install -y php-pgsql;
+yum install -y php-mysql;
+yum install -y php-common;
+yum install -y php-pdo;
+yum install -y php-opcache; 
+yum install -y php-mcrypt;
+yum install -y php-imap;
+yum install -y php-mbstring;
+yum install -y php-xmlrpc;
+yum install -y cronie;
+yum --enablerepo=remi install -y php-pecl-ssh2;
+yum --disablerepo=epel -y update  ca-certificates;
+rm -rf /home/epel-release-6-8.noarch.rpm /home/remi-release-6*.rpm;
+ 	
+# create a file /etc/httpd/conf.d/mailtng.conf
+
+put this content in it and CHANGE domain.com with your main domain ( don't forget to create subdomain app in your domain provider )
+# Nova
+<VirtualHost *:80>
+        ServerName app.example.com
+        DocumentRoot "/var/mailtng/"
+        <Directory /var/mailtng/>
+                AllowOverride all
+                Options Indexes FollowSymLinks ExecCGI
+                AddHandler cgi-script .cgi .pl
+                Order Deny,Allow
+                Allow from all
+        </Directory>
+</VirtualHost>	
+	
+service httpd restart;
+
