@@ -1,0 +1,26 @@
+set ntp "192.168.32.5
+dev-uccx.raja.com.baba.scham.com.in
+system-edv-me "
+#split across lines
+set lines [split $ntp "\n"]
+# i for saving variable from ntp1
+set i 1
+foreach line $lines {
+    set nps [regexp -all -inline {(\d+\.\d+\.\d+\.\d+|[a-zA-Z0-9-].+)} $line]
+    set len [llength $nps]
+    # check whether it's domain/IP or not
+    if { $len >= 1} {
+        set nps [regexp -all -inline {(\d+\.\d+\.\d+\.\d+|[a-zA-Z0-9-].+)} $line]
+        set nps [lsort -unique $nps]
+        set subntp$i "uccxs:ntp$i:$nps"
+        incr i
+    } elseif { [regexp {[A-Za-z0-9-].+} $line] == 1 } {
+        puts "Another version possible"
+        set ar [regexp -all -inline {[A-Za-z0-9-]+} $line]
+        set len [llength $ar]
+        if {  $len == 1 } {
+            set subntp$i "uccxs:ntp$i:$ar"
+            incr i
+        }
+    }
+}

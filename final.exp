@@ -573,6 +573,14 @@ foreach line $lines {
         set nps [lsort -unique $nps]
         set subntp$i "uccxs:ntp$i:$nps"
         incr i
+    } elseif { [regexp {[A-Za-z0-9-]+} $line] == 1 } {
+        puts "Another version possible"
+        set ar [regexp -all -inline {[A-Za-z0-9-]+} $line]
+        set len [llength $ar]
+        if {  $len == 1 } {
+            set subntp$i "uccxs:ntp$i:$ar"
+            incr i
+        }
     }
 }
 while { $i < 6 } {
