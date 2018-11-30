@@ -1,0 +1,148 @@
+#!/usr/bin/expect
+set timeout 60
+set match_max 100000
+set hostname [lindex $argv 0]; #This will be publisher node fqdn
+set osadmin1 [lindex $argv 1]; #Publisher osadmn user name
+set password1 [lindex $argv 2]; #Publisher osadmin name
+set logfile [lindex $argv 3]; #
+set usesame [lindex $argv 4]; #Will be t , if subscriber uses osadmin1 and password1, otherwise f
+
+#if { $usesame == 
+#set osadmin2 [lindex $argv 5]; #If usesame = f, then use this osadmin2 as user
+#set password2 [lindex $argv 6]; #if usesame = f, then use this password2
+#******************************************************************************
+
+log_user 0
+
+
+#Starts a new log file each time it runs
+log_file $logfile
+
+#Checks the variables being passed into the script
+if {[llength $argv] == 0} {
+    send_user "Usage: scriptname, publisher fqdn,osadmin os user, os password, sub uses same user and password, sub osadmin, sub ospassword\n"
+    exit 1
+}
+
+#Starts the SSH process and surpresses the key accept
+
+spawn ssh -q -o StrictHostKeyChecking=no $osadmin1@$hostname
+
+
+
+#Checks the return and looks for password prompt
+
+expect {
+    timeout {
+    log_user 1 
+    send_log "\nlogin_status: failed\nlogin_error: failed to get password prompt\n\n"; 
+    exit 1 
+    }
+    eof {
+    log_user 1 
+    send_log "\nlogin_status: failed\nlogin_error: unable to reach $hostname\n\n"; 
+    exit 1 
+    }
+    "*assword" {
+        send "$password1\r"
+        expect {
+            "*dmin:" {
+                log_user 1
+                send_log "\nlogin_status: success\nlogin_error:\n\n";    
+                send "\r"
+            }
+            "*assword"
+            {
+                log_user 1
+                send_log "\nlogin_status: failed\nlogin_error: username or password is invlaid\n\n"; 
+                exit 1
+            }
+            
+     }
+   }
+}
+
+expect "*dmin:"
+puts "Running show hardware command ..."
+send "show hardware\r"
+expect "Press"
+puts "Found admin bro"
+set hw $expect_out(buffer)
+puts $hw
+
+#--------------------------------------------- show hardware -------------
+# split across lines
+puts "can you run this for me?"
+set lines [split $hw "\n"]
+
+# disk counts
+set dcc 1
+# for each line
+foreach line $lines {
+    set rc [regexp -all -inline {\w+\s+:\s\d} $line]
+    foreach itm $rc {
+        if { [string first "Processors" $itm] != -1 } {
+            set spt [split $itm ":"]
+            set cpuc [lindex $spt 1]
+            set cpuc [string trim $cpuc]
+            set pubvmcpu "uccxs:vm_cpu:$cpuc"
+            puts $pubvmcpu
+        } elseif { [string first "Disks" $itm] != -1 } {
+            set spt [split $itm ":"]
+            set dc [lindex $spt 1]
+            set dc [string trim $dc]
+        }
+    }
+    set disks [regexp -all -inline {Size\s[a-zA-Z0-9() ]+:\s\d+} $line]
+    foreach disk $disks {
+        set itm [split $disk ":"]
+        set dck [lindex $itm 1]
+        set dsksize [string trim $dck]
+        set sizestr [lindex $itm 0]
+        if { [ string first "MB" $sizestr] != -1 } {
+            set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+MB"
+            incr dcc
+        } elseif { [ string first "KB" $sizestr] != -1 } {
+            set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+KB"
+            incr dcc
+        } elseif { [ string first "TB" $sizestr] != -1} {
+            set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+TB"
+            incr dcc
+        } elseif { [ string first "PB" $sizestr] != -1} {
+            set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+PB"
+            incr dcc
+        } elseif { [ string first "GB" $sizestr] != -1} {
+            set pubvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize+GB"
+            incr dcc
+        }
+        puts $pubvmdisk1
+    }
+    while { dcc <= dc} {
+        puts "$dcc"
+        incr dcc
+        set pubvmdisk$dcc "uccxs:vm_disk2:NA"
+    }
+    set type [regexp -all -inline {\w+\s+:\s.+} $line]
+    foreach item $type {
+        if { [ string first "Type" $item ] != -1  } {
+            set spt [split $item ":"]
+            set desc [lindex $spt 1]
+            set desc [string range $desc 1 end]
+            set pubvmproctype "uccxs:vm_type:$desc"
+            puts $pubvmproctype
+        } elseif { [string first "Memory" $item ] != -1 } {
+            set spt [split $item ":"]
+            set desc [lindex $spt 1]
+            set desc [string range $desc 1 end]
+            set pubvmmem "uccxs:vm_ram:$desc"
+            puts $pubvmmem
+        }
+    }
+}
+
+log_user 0
+send_log "$pubvmcpu\n"
+send_log "$pubvmproctype\n"
+send_log "$pubvmmem\n"
+send_log "$pubvmdisk1\n"
+send_log "$pubvmdisk2\n"

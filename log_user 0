@@ -1,0 +1,235 @@
+log_user 0
+		expect "*dmin:"
+		puts "Running show network eth0 command ..."
+		send "show network eth0\r"
+		expect "*dmin:"
+		set ip $expect_out(buffer)
+		puts $ip
+
+		puts "Running show network cluster command ..."
+		send "show network cluster\r"
+		expect "*dmin:"
+		set pubsub $expect_out(buffer)
+		puts $pubsub
+
+		puts "Running show uccx version command ..."
+		send "show uccx version\r"
+		expect "*dmin:"
+		set version $expect_out(buffer)
+		puts $version
+
+		puts "Running utils ntp server list command ..."
+		send "utils ntp server list\r"
+		expect "*dmin:"
+		set ntp $expect_out(buffer)
+		puts $ntp
+
+		puts "Running show hardware command ..."
+		send "show hardware\r"
+		expect "*dmin:"
+		set hw $expect_out(buffer)
+		puts $hw
+
+
+
+
+#puts $ip
+# now we will create key value pairs of Ip Address, DNS, Domain and more
+set records [regexp -all -inline {(\w+\s\w+:\s[a-zA-Z0-9.]+|\w+\s+:\s[a-zA-Z0-9.]+|\w+\s\w+\s:\s[a-zA-Z0-9.]+)} $ip]
+
+# sometimes regex works unexpected so including the point to remove unnecessary duplicates
+set records [lsort -unique $records]
+
+# Now we have key value pair list so iterate over it, find key like Address for IP Address
+# Primary for Primary DNS and so on
+# as soon you filter it out, use the actual values to log in custom format
+# now you can run this undestand what it do
+
+foreach item $records {
+    set keyval [split $item ":"]
+    set key [lindex $keyval 0]
+    if { [string first "Address" $key] != -1 } {
+        set subipadd "uccxs:ip4_add:[lindex $keyval 1]"
+    } elseif { [string first "Primary" $key] != -1 } {
+        set subdns1 "uccxs:dns1:[lindex $keyval 1]"
+    } elseif { [string first "Secondary" $key] != -1 } {
+        if {[string first "Not" [lindex $keyval 1]] != -1} {
+           set subdns2 "uccxs:dns2:Not Configured"
+        } else {
+           set subdns2 "uccxs:dns2:[lindex $keyval 1]"
+        }
+    } elseif { [string first "Domain" $key] != -1} {
+        set subdomain "uccxs:domain:[lindex $keyval 1]"
+    } elseif { [string first "Gateway" $key] != -1 } {
+        set subipgateway "uccs:ip4_gateway:[lindex $keyval 1]"
+    } elseif { [string first "Mask" $key] != -1 } {
+        set subipmask "uccxs:ip4_mask:[lindex $keyval 1]"
+    }
+ }
+
+#----------------------------------------------------------- network cluster formatting
+
+# split across lines
+puts "\n\n"
+puts $pubsub 
+puts "\n\n"
+set splits [split $pubsub "\n"]
+
+#variables to save secondary node, subscriber domain, details
+set foundanother 0
+set subsdns ""
+
+# for each node
+foreach item $splits {
+	if { [string first "Publisher" $item] != -1 } {
+		puts "Publisher Present"
+		# find IP address
+		set ips [regexp -all -inline {\d+\.\d+\.\d+\.\d+} $item]
+		# separate each space separated string
+		set itm [regexp -all -inline {\S+} $item]
+		foreach val $itm {
+			# check whether this is a valid domain or not
+			if { [regexp {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val] == 1} {
+				# valid domain found
+				set dns [regexp -all -inline {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val]
+			}
+		}
+		# assigning variables
+		puts "Found DNS $dns"
+		set sublisher "uccxs:name:$dns"
+		set subprimary "uccxs:is_primary:1"
+		set subnodetype "uccxs:node_type:contactcenterxpress"
+	} elseif { [string first "Subscriber" $item ] != -1 } {
+		puts "Subscriber Present"
+		set ips [regexp -all -inline {\d+\.\d+\.\d+\.\d+} $item]
+		# separate each space separated string
+		set itm [regexp -all -inline {\S+} $item]
+
+		foreach val $itm {
+			# check whether this is a valid domain or not
+			if { [regexp {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val] == 1} {
+				# valid domain found
+                set foundanother 1
+				set dns [regexp -all -inline {[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+} $val]
+                set subsdns $dns
+			}
+		}
+		puts "Found DNS $dns"
+		set subscriber "uccxs:name:$dns"
+		set subprimary "uccxs:is_primary:0"
+		set subnodetype "uccxs:node_type:contactcenterxpress"
+	}
+}
+
+#--------------------------------------------------------- uccx version
+
+# separate each line
+set line [split $version "\n"]
+
+# for each line, check have key value pairs
+foreach item $line {
+	# check for key value string, only one colon
+	if { [string first ":" $item] != -1 } {
+		# find key value pair
+		set keyval [split $item ":"]
+		set key [lindex $keyval 0]
+		set val [lindex $keyval 1]
+		if { [string first "Active" $key] != -1 } {
+			set subactive "uccxs:active_version:$val"
+			puts $subactive 
+		} elseif { [string first "Inactive" $key] != -1 } {
+			set subinactive "uccxs:inactive_version:$val"
+			puts $subinactive
+		}
+	}
+}
+
+#----------------------------------- ntp utils
+
+#split across lines
+set lines [split $ntp "\n"]
+# i for saving variable from ntp1
+set i 1
+foreach line $lines {
+	# check whether it's domain/IP or not
+	if { [regexp {(\d+\.\d+\.\d+\.\d+|[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+)} $line] == 1} {
+		set nps [regexp -all -inline {(\d+\.\d+\.\d+\.\d+|[A-Za-z0-9-]+\.[A-Za-z0-9-]+\.[A-Za-z0-9-]+)} $line]
+		set nps [lsort -unique $nps]
+		set subntp$i "uccxs:ntp$i:$nps"
+		incr i
+	}
+}
+while { $i < 6 } {
+	set subntp$i "uccxs:ntp$i:NA"
+	incr i
+}
+
+#--------------------------------------------- show hardware -------------
+# split across lines
+puts "can you run this for me?"
+set lines [split $hw "\n"]
+
+# disk counts
+set dcc 1
+# for each line
+foreach line $lines {
+    set rc [regexp -all -inline {\w+\s+:\s\d} $line]
+    foreach itm $rc {
+        if { [string first "Processors" $itm] != -1 } {
+            set spt [split $itm ":"]
+            set cpuc [lindex $spt 1]
+            set cpuc [string trim $cpuc]
+            set subvmcpu "uccxs:vm_cpu:$cpuc"
+            puts $subvmcpu
+        } elseif { [string first "Disks" $itm] != -1 } {
+            set spt [split $itm ":"]
+            set dc [lindex $spt 1]
+            set dc [string trim $dc]
+        }
+    }
+    set disks [regexp -all -inline {Size\s[a-zA-Z0-9() ]+:\s\d+} $line]
+    foreach disk $disks {
+        set itm [split $disk ":"]
+        set dck [lindex $itm 1]
+        set dsksize [string trim $dck]
+        set sizestr [lindex $itm 0]
+        if { [ string first "MB" $sizestr] != -1 } {
+            append dsksize "MB"
+            set subvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize"
+            incr dcc
+        } elseif { [ string first "KB" $sizestr] != -1 } {
+            append dsksize "KB"
+            set subvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize"
+            incr dcc
+        } elseif { [ string first "TB" $sizestr] != -1} {
+            append dsksize "TB"
+            set subvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize"
+
+            incr dcc
+        } elseif { [ string first "PB" $sizestr] != -1} {
+            append dsksize "PB"
+            set subvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize"
+            incr dcc
+        } elseif { [ string first "GB" $sizestr] != -1} {
+            append dsksize "GB"
+            set subvmdisk$dcc "uccxs:vm_disk$dcc:$dsksize"
+            incr dcc
+        }
+    }
+    set type [regexp -all -inline {\w+\s+:\s.+} $line]
+    foreach item $type {
+        if { [ string first "Type" $item ] != -1  } {
+            set spt [split $item ":"]
+            set desc [lindex $spt 1]
+            set desc [string range $desc 1 end]
+            set subvmproctype "uccxs:vm_type:$desc"
+            puts $subvmproctype
+        } elseif { [string first "Memory" $item ] != -1 } {
+            set spt [split $item ":"]
+            set desc [lindex $spt 1]
+            set desc [string range $desc 1 end]
+            set subvmmem "uccxs:vm_ram:$desc"
+            puts $subvmmem
+        }
+    }
+}
